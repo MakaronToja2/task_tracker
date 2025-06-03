@@ -1,0 +1,169 @@
+@startuml
+title Task Manager with Users - Class Diagram (UML Standard)
+
+!define BUSINESS_LAYER #LightBlue
+!define DATA_LAYER #LightGreen
+!define PRESENTATION_LAYER #LightYellow
+!define MODEL_LAYER #LightPink
+
+package "Presentation Layer" PRESENTATION_LAYER {
+    class UserRoutes {
+        +create_user(user_data: UserCreate): UserResponse
+        +get_all_users(): List[UserWithTasksResponse]
+        +get_user(user_id: int): UserResponse
+    }
+    
+    class TaskRoutes {
+        +create_task(task_data: TaskCreate): TaskResponse
+        +get_all_tasks(): List[TaskResponse]
+        +get_user_tasks(user_id: int): List[TaskResponse]
+        +complete_task(task_id: int, user_id: int): TaskResponse
+        +delete_task(task_id: int, user_id: int): dict
+    }
+    
+    class UserCreate {
+        +username: str
+        +email: str
+    }
+    
+    class UserResponse {
+        +id: int
+        +username: str
+        +email: str
+    }
+    
+    class TaskCreate {
+        +title: str
+        +description: str
+        +user_id: int
+    }
+    
+    class TaskResponse {
+        +id: int
+        +title: str
+        +description: str
+        +is_completed: bool
+        +user_id: int
+    }
+}
+
+package "Business Layer" BUSINESS_LAYER {
+    class UserService {
+        -repository: UserRepository
+        +__init__(repository: UserRepository)
+        +create_user(username: str, email: str): User
+        +get_all_users(): List[User]
+        +get_user_by_id(user_id: int): User
+    }
+    
+    class TaskService {
+        -task_repository: TaskRepository
+        -user_repository: UserRepository
+        +__init__(task_repo: TaskRepository, user_repo: UserRepository)
+        +create_task(title: str, user_id: int, description: str): Task
+        +get_tasks_by_user(user_id: int): List[Task]
+        +get_all_tasks(): List[Task]
+        +complete_task(task_id: int, user_id: int): Task
+        +delete_task(task_id: int, user_id: int): void
+    }
+    
+    class UserValidationError <<exception>> {
+        +message: str
+    }
+    
+    class TaskValidationError <<exception>> {
+        +message: str
+    }
+}
+
+package "Data Access Layer" DATA_LAYER {
+    class UserRepository {
+        -db: Session
+        +__init__(db: Session)
+        +create_user(username: str, email: str): User
+        +get_all_users(): List[User]
+        +get_user_by_id(user_id: int): User
+        +get_user_by_username(username: str): User
+        +get_user_by_email(email: str): User
+    }
+    
+    class TaskRepository {
+        -db: Session
+        +__init__(db: Session)
+        +create_task(title: str, user_id: int, description: str): Task
+        +get_all_tasks(): List[Task]
+        +get_tasks_by_user(user_id: int): List[Task]
+        +get_task_by_id(task_id: int): Task
+        +get_task_by_id_and_user(task_id: int, user_id: int): Task
+        +update_task(task: Task): Task
+        +delete_task(task: Task): void
+    }
+}
+
+package "Model Layer" MODEL_LAYER {
+    class User {
+        +id: int
+        +username: str
+        +email: str
+        +created_at: DateTime
+        +tasks: List[Task]
+    }
+    
+    class Task {
+        +id: int
+        +title: str
+        +description: str
+        +is_completed: bool
+        +user_id: int
+        +created_at: DateTime
+        +user: User
+    }
+}
+
+package "Database Layer" DATA_LAYER {
+    class DatabaseConnection {
+        +get_db(): Session
+        +create_tables(): void
+    }
+}
+
+' UML Standard Relationships with proper multiplicities
+
+' Association relationships (uses/manages)
+UserRoutes --> UserService
+TaskRoutes --> TaskService
+UserService --> UserRepository
+TaskService --> TaskRepository
+TaskService --> UserRepository
+UserRepository --> User
+TaskRepository --> Task
+UserRepository --> DatabaseConnection
+TaskRepository --> DatabaseConnection
+
+' Domain Model Association (One-to-Many)
+User ||--o{ Task : owns
+User "1" -- "0..*" Task : has
+
+' Dependency relationships (loose coupling)
+UserRoutes ..> UserCreate : <<uses>>
+UserRoutes ..> UserResponse : <<creates>>
+TaskRoutes ..> TaskCreate : <<uses>>
+TaskRoutes ..> TaskResponse : <<creates>>
+
+' Dependency Injection relationships
+UserRoutes ..> UserService : <<depends>>
+TaskRoutes ..> TaskService : <<depends>>
+UserService ..> UserRepository : <<depends>>
+TaskService ..> TaskRepository : <<depends>>
+TaskService ..> UserRepository : <<depends>>
+
+' Exception relationships
+UserService --> UserValidationError : <<throws>>
+TaskService --> TaskValidationError : <<throws>>
+
+' Composition (strong ownership)
+UserService *-- UserRepository : contains
+TaskService *-- TaskRepository : contains
+TaskService *-- UserRepository : contains
+
+@enduml
