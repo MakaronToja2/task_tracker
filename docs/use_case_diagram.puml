@@ -1,18 +1,16 @@
 @startuml
-title Task Manager with Users - Use Case Diagram
+title Task Manager - Use Case Diagram
 
 left to right direction
 
 actor "User" as user
 
 rectangle "Task Manager System" {
-    usecase "Create User Account" as UC1
-    usecase "View All Users" as UC2
-    usecase "Create Task" as UC3
-    usecase "View User's Tasks" as UC4
-    usecase "View All Tasks" as UC5
-    usecase "Complete Task" as UC6
-    usecase "Delete Task" as UC7
+    usecase "Create Account" as UC1
+    usecase "Create Task" as UC2
+    usecase "View My Tasks" as UC3
+    usecase "Complete Task" as UC4
+    usecase "Delete Task" as UC5
 }
 
 user --> UC1
@@ -20,20 +18,14 @@ user --> UC2
 user --> UC3
 user --> UC4
 user --> UC5
-user --> UC6
-user --> UC7
 
-note right of UC1 : Business Rules:\n- Username must be unique\n- Email must be unique\n- Basic email validation
+UC2 ..> UC1 : <<requires account>>
+UC3 ..> UC1 : <<requires account>>
+UC4 ..> UC2 : <<requires task>>
+UC5 ..> UC2 : <<requires task>>
 
-note right of UC3 : Business Rules:\n- Title cannot be empty\n- Title max 100 characters\n- User must exist
+note right of UC1 : Username and email\nmust be unique
 
-note right of UC6 : Business Rules:\n- Only task owner can complete\n- Cannot complete already completed task
-
-note right of UC7 : Business Rules:\n- Only task owner can delete\n- Cannot delete completed tasks
-
-UC3 ..> UC1 : <<requires>>
-UC4 ..> UC1 : <<requires>>
-UC6 ..> UC3 : <<requires>>
-UC7 ..> UC3 : <<requires>>
+note right of UC5 : Cannot delete\ncompleted tasks
 
 @enduml

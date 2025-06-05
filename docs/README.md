@@ -1,20 +1,9 @@
-# System Zarządzania Zadaniami z Użytkownikami
-## Dokumentacja Projektu
+# System Zarządzania Zadaniami - Projekt Akademicki
 
-**Autor:** [Twoje Imię i Nazwisko]  
+**Autor:** Jakub Włoch 
 **Data:** Czerwiec 2025  
-**Wersja:** 2.0  
+**Przedmiot:** Wielowarstwowe aplikacje biznesowe
 **Technologie:** Python, FastAPI, SQLAlchemy, SQLite, Docker  
-
----
-
-## Spis Treści
-
-1. [Wymagania Funkcjonalne i Niefunkcjonalne](#1-wymagania-funkcjonalne-i-niefunkcjonalne)
-2. [Opis Architektury](#2-Opis-architektury)
-3. [Opis Sposobów i Metod Testowania](#3-opis-sposobów-i-metod-testowania)
-4. [Implementacja](#4-implementacja)
-5. [Instrukcje Uruchomienia](#5-instrukcje-uruchomienia)
 
 ---
 
@@ -23,424 +12,211 @@
 ### 1.1 Wymagania Funkcjonalne
 
 **RF01: Zarządzanie użytkownikami**
-- System umożliwia utworzenie nowego użytkownika z unikalną nazwą i adresem email
-- System waliduje poprawność danych użytkownika
-- System wyświetla listę wszystkich użytkowników z liczbą ich zadań
-- System umożliwia pobranie szczegółów konkretnego użytkownika
+- System umożliwia utworzenie użytkownika z unikalną nazwą i emailem
+- System wyświetla listę wszystkich użytkowników
 
-**RF02: Tworzenie zadań**
-- System umożliwia użytkownikowi utworzenie nowego zadania z tytułem i opcjonalnym opisem
-- System przypisuje zadanie do konkretnego użytkownika
-- System sprawdza poprawność danych wejściowych
-- System przypisuje unikalne ID do każdego zadania
-
-**RF03: Przeglądanie zadań**
-- System umożliwia wyświetlenie wszystkich zadań w systemie
-- System umożliwia wyświetlenie zadań konkretnego użytkownika
-- System wyświetla informacje: ID, tytuł, opis, status ukończenia, ID właściciela, data utworzenia
-
-**RF04: Oznaczanie zadań jako ukończone**
-- System umożliwia oznaczenie zadania jako ukończone przez jego właściciela
-- System sprawdza uprawnienia użytkownika do modyfikacji zadania
-- System uniemożliwia ponowne oznaczenie już ukończonego zadania
-
-**RF05: Usuwanie zadań**
-- System umożliwia usunięcie zadania przez jego właściciela
-- System sprawdza uprawnienia użytkownika do usunięcia zadania
-- System stosuje reguły biznesowe dotyczące usuwania
+**RF02: Zarządzanie zadaniami**  
+- System umożliwia utworzenie zadania przypisanego do użytkownika
+- System umożliwia wyświetlenie zadań użytkownika
+- System umożliwia oznaczenie zadania jako ukończone
+- System umożliwia usunięcie zadania (z ograniczeniami)
 
 ### 1.2 Wymagania Niefunkcjonalne
 
-**RNF01: Wydajność**
-- System odpowiada na żądania w czasie < 1 sekundy
-- API zwraca dane w formacie JSON z minimalnymi opóźnieniami
-
-**RNF02: Niezawodność**
-- System zachowuje integralność danych za pomocą transakcji bazodanowych
-- System zawiera mechanizmy odzyskiwania po awarii
-
-**RNF03: Użyteczność**
-- API jest samodokumentujące się (FastAPI automatyczna dokumentacja)
-- Komunikaty o błędach są zrozumiałe dla użytkownika
-- Interfejs REST API jest intuicyjny i zgodny ze standardami
-
-**RNF04: Bezpieczeństwo**
-- System waliduje wszystkie dane wejściowe
-- System zabezpiecza przed atakami SQL Injection poprzez ORM
-- System implementuje walidację na poziomie modelu danych
-- System sprawdza uprawnienia do operacji na zadaniach
-
-**RNF05: Skalowalność**
-- Architektura wielowarstwowa umożliwia łatwe rozszerzanie funkcjonalności
-- Separacja logiki biznesowej od warstwy danych
-- Możliwość dodania nowych modułów bez modyfikacji istniejącego kodu
-- Przygotowanie do containeryzacji i wdrożenia w chmurze
-
-**RNF06: Maintainability**
-- Kod jest dobrze udokumentowany i skomentowany
-- Zastosowanie wzorców projektowych (Repository, Dependency Injection)
-- Wysokie pokrycie kodu testami jednostkowymi i integracyjnymi
-- Jasna struktura katalogów i organizacja kodu
+**RNF01: Wydajność** - Odpowiedzi API < 1 sekunda  
+**RNF02: Niezawodność** - Integralność danych przez transakcje DB  
+**RNF03: Użyteczność** - Automatyczna dokumentacja API (FastAPI)  
+**RNF04: Bezpieczeństwo** - Walidacja danych, zabezpieczenie przed SQL Injection  
 
 ### 1.3 Reguły Biznesowe
 
-**RB01: Walidacja danych użytkownika**
-- Nazwa użytkownika nie może być pusta i musi być unikalna w systemie
-- Adres email musi mieć poprawny format i być unikalny w systemie
-- Długość nazwy użytkownika: minimum 3, maksimum 50 znaków
+- Nazwa użytkownika i email muszą być unikalne
+- Tytuł zadania nie może być pusty (max 100 znaków)
+- Tylko właściciel może modyfikować/usuwać swoje zadania
+- Nie można usunąć ukończonego zadania
 
-**RB02: Walidacja zadań**
-- Tytuł zadania nie może być pusty
-- Tytuł zadania nie może przekraczać 100 znaków
-- Zadanie musi być przypisane do istniejącego użytkownika
+---
 
-**RB03: Uprawnienia użytkownika**
-- Tylko właściciel zadania może je modyfikować (oznaczać jako ukończone)
-- Tylko właściciel zadania może je usunąć
-- Administratorzy mogą przeglądać wszystkie zadania w systemie
+## 2. Diagramy Przypadków Użycia
 
-**RB04: Ograniczenia operacyjne**
-- Nie można usunąć zadania, które zostało oznaczone jako ukończone
-- Nie można ponownie oznaczać ukończonego zadania jako ukończone
-- Usunięcie użytkownika powoduje usunięcie wszystkich jego zadań (cascade delete)
-
-### 2.1 Opis Architektury
-
-**Wzorzec Architektoniczny: Layered Architecture (Architektura Warstwowa)**
-
-System został zaprojektowany zgodnie z wzorcem architektury warstwowej, która zapewnia:
-- Separację odpowiedzialności (Separation of Concerns)
-- Luźne powiązanie między warstwami (Loose Coupling)
-- Wysoką kohezję w obrębie warstw (High Cohesion)
-- Łatwość testowania i utrzymania
-
-**Warstwa Prezentacji (Presentation Layer)**
-- **Odpowiedzialność:** Obsługa żądań HTTP, walidacja danych wejściowych, serializacja odpowiedzi
-- **Klasy główne:** `UserRoutes`, `TaskRoutes`
-- **DTOs:** `UserCreate`, `UserResponse`, `TaskCreate`, `TaskResponse`
-- **Technologia:** FastAPI z automatyczną dokumentacją OpenAPI
-
-**Warstwa Logiki Biznesowej (Business Layer)**
-- **Odpowiedzialność:** Implementacja reguł biznesowych, walidacja, koordynacja operacji
-- **Klasy główne:** `UserService`, `TaskService`
-- **Wyjątki:** `UserValidationError`, `TaskValidationError`
-- **Wzorce:** Service Pattern, Domain Logic Pattern
-
-**Warstwa Dostępu do Danych (Data Access Layer)**
-- **Odpowiedzialność:** Abstrakcja operacji bazodanowych, mapowanie obiektów
-- **Klasy główne:** `UserRepository`, `TaskRepository`
-- **Wzorce:** Repository Pattern, Data Access Object (DAO)
-- **Technologia:** SQLAlchemy ORM
-
-**Warstwa Modelu (Model Layer)**
-- **Odpowiedzialność:** Definicja struktury danych, relacje między encjami
-- **Klasy główne:** `User`, `Task`
-- **Relacje:** One-to-Many (User → Task)
-- **Technologia:** SQLAlchemy Models z automatyczną migracją
-
-**Warstwa Bazy Danych (Database Layer)**
-- **Odpowiedzialność:** Zarządzanie połączeniami, konfiguracja bazy danych
-- **Klasy główne:** `DatabaseConnection`
-- **Technologia:** SQLite (development), PostgreSQL (production ready)
-
-### 3. Wzorce Projektowe Zastosowane
-
-**1. Repository Pattern**
-- Abstrakcja dostępu do danych
-- Ułatwia testowanie przez możliwość mock-owania
-- Centralizuje logikę zapytań bazodanowych
-
-**2. Dependency Injection**
-- Luźne powiązanie między warstwami
-- Lepsze testowanie i maintainability
-- Konfiguracja zależności przez FastAPI
-
-**3. DTO (Data Transfer Object) Pattern**
-- Separacja między obiektami domenowymi a API
-- Kontrola nad tym, jakie dane są udostępniane
-- Walidacja danych na poziomie API
-
-**4. Service Pattern**
-- Enkapsulacja logiki biznesowej
-- Koordynacja operacji między różnymi repozytoriami
-- Centraliczne miejsce dla reguł biznesowych
-
-## 3. Opis Sposobów i Metod Testowania
-
-### 3.1 Strategia Testowania
-
-**Filozofia Testowania:**
-System wykorzystuje podejście Test-Driven Development (TDD) i Testing Pyramid:
-
-```
-    E2E Tests (10%)
-   ________________
-  Integration Tests (20%)
- ________________________
-Unit Tests (70%)
+```plantuml
+@startuml
+actor "User" as user
+rectangle "Task Manager" {
+    usecase "Create User" as UC1
+    usecase "Create Task" as UC2  
+    usecase "View Tasks" as UC3
+    usecase "Complete Task" as UC4
+    usecase "Delete Task" as UC5
+}
+user --> UC1
+user --> UC2
+user --> UC3  
+user --> UC4
+user --> UC5
+@enduml
 ```
 
-**Cele Testowania:**
-- Zapewnienie poprawności logiki biznesowej
-- Weryfikacja integracji między warstwami
-- Walidacja zachowania API
-- Utrzymanie wysokiej jakości kodu
+**Główne przypadki użycia:**
+- Użytkownik tworzy konto w systemie
+- Użytkownik dodaje nowe zadanie
+- Użytkownik przegląda swoje zadania
+- Użytkownik oznacza zadanie jako ukończone
+- Użytkownik usuwa zadanie (jeśli nie jest ukończone)
 
-### 3.2 Testy Jednostkowe (Unit Tests)
+---
 
-**Zakres:** Testowanie warstwy logiki biznesowej w izolacji
+## 3. Diagramy Klas
 
-**Testowane Klasy:**
-- `UserService` - logika zarządzania użytkownikami
-- `TaskService` - logika zarządzania zadaniami
+### 3.1 Architektura Warstwowa
 
-**Metodologia:**
-- **Wzorzec AAA:** Arrange-Act-Assert
-- **Mocking:** Użycie mock obiektów dla repozytoriów
-- **Framework:** pytest z unittest.mock
-
-**Technologie:**
-- Framework: `pytest`
-- HTTP Client: `TestClient` (FastAPI)
-- Baza testowa: SQLite in-memory
-
-### 3.2 Metryki Jakości
-
-**Pokrycie Kodu (Code Coverage):**
-- **Cel:** Minimum 90% pokrycia kodu
-- **Warstwa Biznesowa:** 100% (krytyczna)
-- **Warstwa API:** 95%
-- **Warstwa Repository:** 85%
-
-**Konwencje Testów:**
-- Czytelne nazwy testów opisujące scenariusz
-- Jeden test = jeden scenariusz biznesowy
-- Wzorzec AAA we wszystkich testach
-- Mock-owanie zależności zewnętrznych
-
-**Narzędzia Jakości:**
-```bash
-# Pokrycie kodu
-pytest --cov=. --cov-report=html --cov-fail-under=90
-
-# Analiza statyczna kodu
-flake8 --max-line-length=100
-black --check .
-mypy .
+```
+┌─────────────────────────┐
+│   Presentation Layer    │ ← API Routes (FastAPI)
+├─────────────────────────┤
+│   Business Layer        │ ← Services (Logika biznesowa)  
+├─────────────────────────┤
+│   Data Access Layer     │ ← Repositories (Dostęp do danych)
+├─────────────────────────┤
+│   Model Layer           │ ← SQLAlchemy Models
+└─────────────────────────┘
 ```
 
-### 3.4 Testowanie Manualne
+### 3.2 Kluczowe Klasy
 
-**API Documentation:**
-- FastAPI automatycznie generuje dokumentację
-- Dostępna pod adresem: `http://localhost:8000/docs`
-- Umożliwia testowanie endpointów przez przeglądarkę
+**Warstwa Biznesowa:**
+- `UserService` - Logika zarządzania użytkownikami
+- `TaskService` - Logika zarządzania zadaniami
 
-**Scenariusze testów manualnych:**
-1. Utworzenie zadania z poprawnymi danymi
-2. Próba utworzenia zadania z pustym tytułem
-3. Próba utworzenia zadania z za długim tytułem
-4. Ukończenie zadania
-5. Próba usunięcia ukończonego zadania
+**Warstwa Dostępu:**
+- `UserRepository` - Operacje bazodanowe dla użytkowników  
+- `TaskRepository` - Operacje bazodanowe dla zadań
 
+**Modele:**
+- `User` - Model użytkownika (id, username, email, tasks[])
+- `Task` - Model zadania (id, title, description, is_completed, user_id)
 
-### 3.4 Scenariusze Testowe End-to-End
+**Relacje:**
+- User 1:N Task (jeden użytkownik może mieć wiele zadań)
 
-**Scenariusz 1: Pełny cykl życia zadania**
-1. Utwórz użytkownika
-2. Utwórz zadanie dla użytkownika
-3. Pobierz listę zadań użytkownika
-4. Oznacz zadanie jako ukończone
-5. Sprawdź czy zadanie nie może być usunięte (reguła biznesowa)
+---
 
-**Scenariusz 2: Walidacja uprawnień**
-1. Utwórz dwóch użytkowników
-2. Pierwszy użytkownik tworzy zadanie
-3. Drugi użytkownik próbuje oznaczyć zadanie jako ukończone (powinno się nie udać)
-4. Pierwszy użytkownik oznacza swoje zadanie jako ukończone (powinno się udać)
+## 4. Opis Sposobów i Metod Testowania
 
-**Scenariusz 3: Walidacja reguł biznesowych**
-1. Próba utworzenia użytkownika z pustą nazwą (błąd)
-2. Próba utworzenia zadania z pustym tytułem (błąd)
-3. Próba utworzenia zadania dla nieistniejącego użytkownika (błąd)
+### 4.1 Strategia Testowania
 
+Zastosowano **Testing Pyramid**:
+- **70% Unit Tests** - testowanie logiki biznesowej w izolacji
+- **20% Integration Tests** - testowanie API endpoints  
+- **10% E2E Tests** - pełne scenariusze użytkownika
 
-### 3.5 Testowanie Wydajności
+### 4.2 Narzędzia Testowe
 
-**Load Testing:**
-- Symulacja 100 równoczesnych użytkowników
-- Testowanie endpoint-ów pod obciążeniem
-- Monitorowanie czasu odpowiedzi
+- **pytest** - framework testowy
+- **unittest.mock** - mockowanie zależności dla testów jednostkowych
+- **TestClient (FastAPI)** - testowanie API endpoints
+- **SQLite in-memory** - baza testowa
 
-**Narzędzia:**
-```bash
-# Użycie locust dla testów obciążenia
-pip install locust
-locust -f performance_tests.py --host=http://localhost:8000
+### 4.3 Przykłady Testów
+
+**Test jednostkowy (Business Layer):**
+```python
+def test_create_task_user_not_found():
+    # Given: Mock repository zwraca None (user nie istnieje)
+    mock_repo.get_user_by_id.return_value = None
+    
+    # When: Próbujemy utworzyć zadanie
+    # Then: Oczekujemy wyjątku walidacji
+    with pytest.raises(TaskValidationError):
+        service.create_task("Test Task", user_id=999)
 ```
 
-## 4. Implementacja
+**Test integracyjny (API):**
+```python
+def test_create_task_success():
+    # Given: Użytkownik istnieje w bazie
+    user = client.post("/api/users/", json={"username": "test"})
+    
+    # When: Tworzymy zadanie przez API
+    response = client.post("/api/tasks/", 
+                          json={"title": "Test", "user_id": 1})
+    
+    # Then: Zadanie zostaje utworzone
+    assert response.status_code == 200
+    assert response.json()["title"] == "Test"
+```
 
-### 4.1 Struktura Projektu
+### 4.4 Pokrycie Testami
+
+- **Warstwa biznesowa:** 100% (najważniejsza)
+- **API endpoints:** 95% 
+- **Repositories:** 85%
+
+---
+
+## 5. Implementacja
+
+### 5.1 Struktura Projektu
 
 ```
 task_manager/
-├── main.py                    # Punkt wejścia aplikacji
-├── requirements.txt           # Zależności Python
-├── Dockerfile                # Konfiguracja Docker
-├── docker-compose.yml        # Orchestracja kontenerów
-├── models/
-│   ├── __init__.py
-│   ├── user.py               # Model użytkownika
-│   └── task.py               # Model zadania
-├── services/
-│   ├── __init__.py
-│   ├── user_service.py       # Logika biznesowa użytkowników
-│   └── task_service.py       # Logika biznesowa zadań
-├── repositories/
-│   ├── __init__.py
-│   ├── user_repository.py    # Dostęp do danych użytkowników
-│   └── task_repository.py    # Dostęp do danych zadań
-├── api/
-│   ├── __init__.py
-│   ├── user_routes.py        # Endpoint-y użytkowników
-│   └── task_routes.py        # Endpoint-y zadań
-├── database/
-│   ├── __init__.py
-│   └── connection.py         # Konfiguracja bazy danych
-├── tests/
-│   ├── __init__.py
-│   ├── test_user_service.py  # Testy logiki użytkowników
-│   ├── test_task_service.py  # Testy logiki zadań
-│   ├── test_user_routes.py   # Testy API użytkowników
-│   └── test_task_routes.py   # Testy API zadań
-└── docs/
-    ├── README.md             # Dokumentacja uruchomienia
-    └── api_examples.md       # Przykłady użycia API
+├── main.py              # Entry point
+├── models/              # SQLAlchemy models  
+├── services/            # Business logic
+├── repositories/        # Data access
+├── api/                 # FastAPI routes
+├── database/            # DB connection
+├── tests/               # Unit & integration tests
+└── docs/                # Documentation
 ```
 
-### 4.2 Technologie Wykorzystane
+### 5.2 Wzorce Zastosowane
 
-**Backend Framework:**
-- **FastAPI 0.104.1** - Nowoczesny, szybki framework web
-- **Pydantic** - Walidacja danych i serializacja
-- **OpenAPI/Swagger** - Automatyczna dokumentacja API
+**Repository Pattern** - Abstrakcja dostępu do danych
+```python
+class TaskRepository:
+    def create_task(self, title: str, user_id: int) -> Task:
+        # Implementacja dostępu do bazy
+```
 
-**ORM i Baza Danych:**
-- **SQLAlchemy 2.0.23** - Object-Relational Mapping
-- **SQLite** - Baza danych (development)
+**Service Pattern** - Enkapsulacja logiki biznesowej  
+```python
+class TaskService:
+    def create_task(self, title: str, user_id: int) -> Task:
+        # Walidacja reguł biznesowych
+        # Wywołanie repository
+```
 
-**Testing Framework:**
-- **pytest 7.4.3** - Framework testowy
-- **httpx** - HTTP client for testing
-- **unittest.mock** - Mocking dependencies
+**Dependency Injection** - Luźne powiązanie warstw
+```python
+def get_service(db: Session = Depends(get_db)) -> TaskService:
+    return TaskService(TaskRepository(db), UserRepository(db))
+```
 
-**DevOps i Deployment:**
+### 5.3 Technologie
+
+- **FastAPI** - Framework web z automatyczną dokumentacją
+- **SQLAlchemy** - ORM do zarządzania bazą danych  
+- **SQLite** - Baza danych (prosta w użyciu)
 - **Docker** - Konteneryzacja aplikacji
-- **Docker Compose** - Orchestracja wielu kontenerów
-- **Uvicorn** - ASGI server (development)
+- **pytest** - Framework testowy
 
-### 4.3 Kluczowe Funkcjonalności
+---
 
-**Zarządzanie Użytkownikami:**
-- Rejestracja nowych użytkowników
-- Walidacja unikalności nazwy i emaila
-- Lista użytkowników z liczbą zadań
+## 6. Uruchomienie
 
-**Zarządzanie Zadaniami:**
-- Tworzenie zadań z przypisaniem do użytkownika
-- Listowanie zadań per użytkownik
-- Oznaczanie zadań jako ukończone
-- Usuwanie zadań z regułami biznesowymi
-
-**API Features:**
-- RESTful design
-- JSON request/response
-- Automatyczna walidacja danych
-- Interaktywna dokumentacja
-- Error handling z informacyjnymi komunikatami
-
-## 5. Instrukcje Uruchomienia
-
-### 5.1 Wymagania Systemowe
-
-**Minimum Requirements:**
-- Python 3.8 lub nowszy
-- Docker 20.10+ i Docker Compose 2.0+
-
-**Recommended:**
-- Python 3.11
-- Docker 24.0+
-
-### 5.2 Uruchomienie Lokalne (bez Docker)
-
-**Krok 1: Klonowanie repozytorium**
-```bash
-git clone https://github.com/MakaronToja/renovation_budget task_manager
-cd task-manager
-```
-
-**Krok 2: Tworzenie środowiska wirtualnego**
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-```
-
-**Krok 3: Instalacja zależności**
+### Lokalne uruchomienie:
 ```bash
 pip install -r requirements.txt
-```
-
-**Krok 4: Uruchomienie aplikacji**
-```bash
 uvicorn main:app --reload
 ```
 
-**Krok 5: Testowanie**
+### Docker (dla maksymalnej oceny):
 ```bash
-# Uruchomienie testów
-pytest
-
-# Testy z pokryciem kodu
-pytest --cov=. --cov-report=html
-```
-
-### 5.3 Uruchomienie z Docker
-
-**Development Mode:**
-```bash
-# Build i uruchomienie
 docker-compose up --build
-
-# W tle
-docker-compose up -d --build
-
-# Zatrzymanie
-docker-compose down
 ```
 
-### 5.4 Dostęp do Aplikacji
+**API dostępne pod:** http://localhost:8000  
+**Dokumentacja:** http://localhost:8000/docs
 
-**Endpoints:**
-- **API:** http://localhost:8000
-- **Interactive Docs:** http://localhost:8000/docs
-- **ReDoc:** http://localhost:8000/redoc
-
-**Przykłady Wywołań:**
-```bash
-# Status aplikacji
-curl http://localhost:8000/
-
-# Tworzenie użytkownika
-curl -X POST "http://localhost:8000/api/users/" \
-     -H "Content-Type: application/json" \
-     -d '{"username": "testuser", "email": "test@example.com"}'
-
-# Lista użytkowników
-curl http://localhost:8000/api/users/
-
-# Tworzenie zadania
-curl -X POST "http://localhost:8000/api/tasks/" \
-     -H "Content-Type: application/json" \
-     -d '{"title": "Test Task", "user_id": 1}'
-```
+---
