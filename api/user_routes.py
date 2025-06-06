@@ -36,12 +36,14 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(repository)
 
 @router.post("/", response_model=UserResponse)
-def create_user(user_data: UserCreate, service: UserService = Depends(get_user_service)):
+# Dependency relationship example
+def create_user(user_data: UserCreate, service: UserService = Depends(get_user_service)): #UserRoutes DEPENDS ON UserService
     """Create a new user"""
     try:
-        user = service.create_user(user_data.username, user_data.email)
+        user = service.create_user(user_data.username, user_data.email) ##  UserRoutes USES UserService method
         return user
     except UserValidationError as e:
+        ##  UserRoutes knows about UserService except
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/", response_model=List[UserWithTasksResponse])

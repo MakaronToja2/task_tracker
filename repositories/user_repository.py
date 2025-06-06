@@ -7,6 +7,7 @@ class UserRepository:
     
     def __init__(self, db: Session):
         self.db = db
+        ## Aggregation - Repository uses Session for all operations
     
     def create_user(self, username: str, email: str) -> User:
         """Create a new user"""
@@ -23,6 +24,7 @@ class UserRepository:
     def get_user_by_id(self, user_id: int) -> Optional[User]:
         """Get user by ID"""
         return self.db.query(User).filter(User.id == user_id).first()
+        ##  All operations go through contained session
     
     def get_user_by_username(self, username: str) -> Optional[User]:
         """Get user by username"""

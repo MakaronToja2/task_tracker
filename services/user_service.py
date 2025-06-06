@@ -9,10 +9,13 @@ class UserValidationError(Exception):
 class UserService:
     """Business logic layer for users"""
     
+   # Association example
     def __init__(self, repository: UserRepository):
+        #UserService stores reference
         self.repository = repository
     
     def create_user(self, username: str, email: str) -> User:
+        ## UserService USES its repository
         """Create a new user with validation"""
         # Business rule: Username cannot be empty
         if not username or username.strip() == "":
@@ -20,6 +23,7 @@ class UserService:
         
         # Business rule: Username must be unique
         existing_user = self.repository.get_user_by_username(username.strip())
+        #Direct method call on stored reference
         if existing_user:
             raise UserValidationError("Username already exists")
         

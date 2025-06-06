@@ -132,9 +132,9 @@ package "Database Layer" DATA_LAYER {
 ' Association relationships (uses/manages)
 UserRoutes --> UserService
 TaskRoutes --> TaskService
-UserService --> UserRepository
-TaskService --> TaskRepository
-TaskService --> UserRepository
+UserService o-- UserRepository : contains
+TaskService o-- TaskRepository : contains
+TaskService o-- UserRepository : contains
 UserRepository --> User
 TaskRepository --> Task
 UserRepository --> DatabaseConnection
