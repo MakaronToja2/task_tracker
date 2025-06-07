@@ -19,13 +19,13 @@ user --> UC3
 user --> UC4
 user --> UC5
 
-UC2 ..> UC1 : <<requires account>>
-UC3 ..> UC1 : <<requires account>>
-UC4 ..> UC2 : <<requires task>>
-UC5 ..> UC2 : <<requires task>>
+UC2 ..> UC1 : <<potrzeba konta>>
+UC3 ..> UC1 : <<potrzeba konta>>
+UC4 ..> UC2 : <<potrzeba zadania>>
+UC5 ..> UC2 : <<potrzeba zadania>>
 
-note right of UC1 : Username and email\nmust be unique
+note right of UC1 : nazwa użytkownika oraz email\muszą być unikalne
 
-note right of UC5 : Cannot delete\ncompleted tasks
+note right of UC5 : Nie można usunąć\nukończonych zadań
 
 @enduml

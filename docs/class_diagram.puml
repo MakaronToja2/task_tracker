@@ -1,44 +1,56 @@
 @startuml
-title Task Manager with Users - Class Diagram (UML Standard)
+title Task Manager System - Complete Class Diagram
 
-!define BUSINESS_LAYER #LightBlue
-!define DATA_LAYER #LightGreen
-!define PRESENTATION_LAYER #LightYellow
-!define MODEL_LAYER #LightPink
+!define PRESENTATION_LAYER #FFE4B5
+!define BUSINESS_LAYER #B0E0E6
+!define DATA_LAYER #98FB98
+!define MODEL_LAYER #FFB6C1
+!define DATABASE_LAYER #DDA0DD
 
-package "Presentation Layer" PRESENTATION_LAYER {
-    class UserRoutes {
+package "Presentation Layer (API)" PRESENTATION_LAYER {
+    class "<<router>>\nUserRoutes" as UserRoutes {
+        -router: APIRouter
         +create_user(user_data: UserCreate): UserResponse
         +get_all_users(): List[UserWithTasksResponse]
         +get_user(user_id: int): UserResponse
+        -get_user_service(db: Session): UserService
     }
     
-    class TaskRoutes {
+    class "<<router>>\nTaskRoutes" as TaskRoutes {
+        -router: APIRouter
         +create_task(task_data: TaskCreate): TaskResponse
         +get_all_tasks(): List[TaskResponse]
         +get_user_tasks(user_id: int): List[TaskResponse]
         +complete_task(task_id: int, user_id: int): TaskResponse
         +delete_task(task_id: int, user_id: int): dict
+        -get_task_service(db: Session): TaskService
     }
     
-    class UserCreate {
+    class "<<DTO>>\nUserCreate" as UserCreate {
         +username: str
         +email: str
     }
     
-    class UserResponse {
+    class "<<DTO>>\nUserResponse" as UserResponse {
         +id: int
         +username: str
         +email: str
     }
     
-    class TaskCreate {
+    class "<<DTO>>\nUserWithTasksResponse" as UserWithTasksResponse {
+        +id: int
+        +username: str
+        +email: str
+        +task_count: int
+    }
+    
+    class "<<DTO>>\nTaskCreate" as TaskCreate {
         +title: str
-        +description: str
+        +description: Optional[str]
         +user_id: int
     }
     
-    class TaskResponse {
+    class "<<DTO>>\nTaskResponse" as TaskResponse {
         +id: int
         +title: str
         +description: str
@@ -47,31 +59,35 @@ package "Presentation Layer" PRESENTATION_LAYER {
     }
 }
 
-package "Business Layer" BUSINESS_LAYER {
+package "Business Logic Layer" BUSINESS_LAYER {
     class UserService {
         -repository: UserRepository
         +__init__(repository: UserRepository)
         +create_user(username: str, email: str): User
         +get_all_users(): List[User]
         +get_user_by_id(user_id: int): User
+        -_validate_username(username: str): void
+        -_validate_email(email: str): void
     }
     
     class TaskService {
         -task_repository: TaskRepository
         -user_repository: UserRepository
-        +__init__(task_repo: TaskRepository, user_repo: UserRepository)
+        +__init__(task_repository, user_repository)
         +create_task(title: str, user_id: int, description: str): Task
         +get_tasks_by_user(user_id: int): List[Task]
         +get_all_tasks(): List[Task]
         +complete_task(task_id: int, user_id: int): Task
         +delete_task(task_id: int, user_id: int): void
+        -_validate_title(title: str): void
+        -_validate_user_exists(user_id: int): User
     }
     
-    class UserValidationError <<exception>> {
+    class "<<exception>>\nUserValidationError" as UserValidationError {
         +message: str
     }
     
-    class TaskValidationError <<exception>> {
+    class "<<exception>>\nTaskValidationError" as TaskValidationError {
         +message: str
     }
 }
@@ -82,9 +98,9 @@ package "Data Access Layer" DATA_LAYER {
         +__init__(db: Session)
         +create_user(username: str, email: str): User
         +get_all_users(): List[User]
-        +get_user_by_id(user_id: int): User
-        +get_user_by_username(username: str): User
-        +get_user_by_email(email: str): User
+        +get_user_by_id(user_id: int): Optional[User]
+        +get_user_by_username(username: str): Optional[User]
+        +get_user_by_email(email: str): Optional[User]
     }
     
     class TaskRepository {
@@ -93,77 +109,97 @@ package "Data Access Layer" DATA_LAYER {
         +create_task(title: str, user_id: int, description: str): Task
         +get_all_tasks(): List[Task]
         +get_tasks_by_user(user_id: int): List[Task]
-        +get_task_by_id(task_id: int): Task
-        +get_task_by_id_and_user(task_id: int, user_id: int): Task
+        +get_task_by_id(task_id: int): Optional[Task]
+        +get_task_by_id_and_user(task_id, user_id): Optional[Task]
         +update_task(task: Task): Task
         +delete_task(task: Task): void
     }
 }
 
-package "Model Layer" MODEL_LAYER {
-    class User {
-        +id: int
-        +username: str
-        +email: str
+package "Model Layer (Domain)" MODEL_LAYER {
+    class "<<entity>>\nUser" as User {
+        +id: int {PK}
+        +username: str {unique}
+        +email: str {unique}
         +created_at: DateTime
         +tasks: List[Task]
+        __tablename__ = "users"
     }
     
-    class Task {
-        +id: int
+    class "<<entity>>\nTask" as Task {
+        +id: int {PK}
         +title: str
-        +description: str
+        +description: Optional[str]
         +is_completed: bool
-        +user_id: int
+        +user_id: int {FK}
         +created_at: DateTime
         +user: User
+        __tablename__ = "tasks"
     }
 }
 
-package "Database Layer" DATA_LAYER {
+package "Database Layer" DATABASE_LAYER {
     class DatabaseConnection {
+        +engine: Engine
+        +SessionLocal: sessionmaker
+        +Base: declarative_base
         +get_db(): Session
         +create_tables(): void
     }
+    
+    class "<<interface>>\nSession" as Session {
+        +add(instance): void
+        +commit(): void
+        +refresh(instance): void
+        +query(model): Query
+        +delete(instance): void
+    }
 }
 
-' UML Standard Relationships with proper multiplicities
+' === RELATIONSHIPS ===
 
-' Association relationships (uses/manages)
-UserRoutes --> UserService
-TaskRoutes --> TaskService
-UserService o-- UserRepository : contains
-TaskService o-- TaskRepository : contains
-TaskService o-- UserRepository : contains
-UserRepository --> User
-TaskRepository --> Task
-UserRepository --> DatabaseConnection
-TaskRepository --> DatabaseConnection
+' 1. Dependency Injection (Routes -> Services)
+UserRoutes ..> UserService : <<creates via DI>>
+TaskRoutes ..> TaskService : <<creates via DI>>
+UserRoutes ..> DatabaseConnection : <<uses get_db()>>
+TaskRoutes ..> DatabaseConnection : <<uses get_db()>>
 
-' Domain Model Association (One-to-Many)
-User ||--o{ Task : owns
-User "1" -- "0..*" Task : has
+' 2. Service Layer Dependencies
+UserService o-- UserRepository : composition
+TaskService o-- TaskRepository : composition
+TaskService o-- UserRepository : composition
 
-' Dependency relationships (loose coupling)
-UserRoutes ..> UserCreate : <<uses>>
-UserRoutes ..> UserResponse : <<creates>>
-TaskRoutes ..> TaskCreate : <<uses>>
-TaskRoutes ..> TaskResponse : <<creates>>
+' 3. Repository Dependencies
+UserRepository ..> Session : <<uses>>
+TaskRepository ..> Session : <<uses>>
+UserRepository ..> User : <<manages>>
+TaskRepository ..> Task : <<manages>>
 
-' Dependency Injection relationships
-UserRoutes ..> UserService : <<depends>>
-TaskRoutes ..> TaskService : <<depends>>
-UserService ..> UserRepository : <<depends>>
-TaskService ..> TaskRepository : <<depends>>
-TaskService ..> UserRepository : <<depends>>
+' 4. DTO Usage (Routes use DTOs)
+UserRoutes ..> UserCreate : <<input>>
+UserRoutes ..> UserResponse : <<output>>
+UserRoutes ..> UserWithTasksResponse : <<output>>
+TaskRoutes ..> TaskCreate : <<input>>
+TaskRoutes ..> TaskResponse : <<output>>
 
-' Exception relationships
-UserService --> UserValidationError : <<throws>>
-TaskService --> TaskValidationError : <<throws>>
+' 5. Exception Handling
+UserService ..> UserValidationError : <<throws>>
+TaskService ..> TaskValidationError : <<throws>>
+UserRoutes ..> UserValidationError : <<catches>>
+TaskRoutes ..> TaskValidationError : <<catches>>
 
-' Composition (strong ownership)
-UserService *-- UserRepository : contains
-TaskService *-- TaskRepository : contains
-TaskService *-- UserRepository : contains
+' 6. Domain Model Relationships
+User "1" *-- "0..*" Task : owns
+Task "0..*" --* "1" User : belongs to
+
+' 7. Database Session Management
+DatabaseConnection ..> Session : <<provides>>
+
+' 8. Model Registration
+User --|> DatabaseConnection : registers with Base
+Task --|> DatabaseConnection : registers with Base
+
+' 9. Service Layer Cross-Dependencies
+TaskService ..> User : <<validates existence>>
 
 @enduml
